@@ -1,3 +1,6 @@
 [submodule "TPS_Snippets"]
 	path = TPS_Snippets
 	url = https://github.com/ChristianCella/TPS_Snippets.git
+[submodule "src/TPS_Snippets"]
+	path = src/TPS_Snippets
+	url = https://github.com/ChristianCella/TPS_Snippets.git
