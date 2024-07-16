@@ -37,7 +37,7 @@ def main():
     s.connect((host, port))
 
     # First send (shared data)
-    shared_data = np.array([[Nsim, multiplier, Ntasks]], dtype = np.int32)
+    shared_data = np.array([[Nsim, Ndecimals, multiplier, Ntasks, Nitems, Ncoordinates]], dtype = np.int32)
     send_array(s, shared_data)
 
     # Initialize the trigegr here (not in the configuration file)
@@ -45,7 +45,11 @@ def main():
 
     while trigger_end < Nsim - 1:
 
-        # Create all the necessary arrays      
+        # Send the layout (Bayesian Optimization will be the higher-level optimizer)  
+        new_layout = np.array([layout], dtype = np.int32)
+        send_array(s, new_layout)
+
+        # Send the sequence of operations (TAS is the lower level optimizer)   
         sequence = np.array([branch_and_bound], dtype = np.int32)
         send_array(s, sequence)
 

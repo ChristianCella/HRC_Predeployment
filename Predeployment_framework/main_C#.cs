@@ -28,6 +28,9 @@ class Program
         TcpListener server = null;
         try
         {
+        	// Common name between objects
+        	string obj_name = "YAOSC_cube";
+        	
             // Define the number of simulations
             int port = 12345;
 
@@ -47,16 +50,36 @@ class Program
 
 			// Acquire the number of simulations
             int Nsim = shared_data[0, 0];
+            int Ndecimals = shared_data[0, 1];
+            int multiplier = shared_data[0, 2];
+            int Ntasks = shared_data[0, 3];
+            int Nitems = shared_data[0, 4];
+            int Ncoordinates = shared_data[0, 5];
+            
+            // Get the positions of the objects
 
             // Loop for all the simulations
             for (int ii = 1; ii < Nsim; ii++)
             {
+            
+            	// Receive the layout (remember: divide it by 'multiplier')
+                var layout = ReceiveNumpyArray(stream);
+                output.Write("The layout is:");
+                PrintArray(layout, output);
+                
+                // Refresh the positions of the objects
+                
+                for (int jj = 1; jj < Nitems + 1; jj ++)
+                {
+                	RefreshResources(obj_name, jj, layout, Ncoordinates, multiplier, output);
+                	TxApplication.RefreshDisplay();
+                	output.Write(obj_name + jj);
+                }
+            	
                 // Receive sequence array
                 var sequence = ReceiveNumpyArray(stream);
                 output.Write("Sequence:");
-                PrintArray(sequence, output);
-                
-                // Create the operations (0 = human, 1 = robot)
+                PrintArray(sequence, output);              
 
                 // Send the array of times back to python
                 int[] kpis = { 1 + ii, 2 + ii, 3 + ii, 4 + ii };
@@ -119,5 +142,45 @@ class Program
             }
             m_output.Write("\n");
         }
+    }
+    
+    // Function to refresh the position of the objects
+    static void RefreshResources(string name, int idx, int[,] positions, int Ncoordinates, int multiplier, StringWriter m_output)
+    {
+    	// Get the correct object
+    	TxObjectList obj_pick = TxApplication.ActiveSelection.GetItems();
+		obj_pick = TxApplication.ActiveDocument.GetObjectsByName(name + idx);
+		m_output.Write(name + idx + "\n");
+		var obj = obj_pick[0] as ITxLocatableObject; // take the first object with taht name
+		
+		// Extract the relevant portion of the positions array
+    	int startIdx = Ncoordinates * (idx - 1);
+    	int endIdx = Ncoordinates * idx;
+	
+    	int[,] reduced_positions = new int[1, Ncoordinates];
+    	for (int i = 0; i < Ncoordinates; i++)
+    	{
+        	reduced_positions[0, i] = positions[0, startIdx + i];
+    	}
+		
+		// Scale back the positions and rotations
+		var posx = reduced_positions[0, 0] / multiplier;
+		var posy = reduced_positions[0, 1] / multiplier;
+		var posz = reduced_positions[0, 2] / multiplier;
+		var rx = reduced_positions[0, 3] / multiplier;
+		var ry = reduced_positions[0, 4] / multiplier;
+		var rz = reduced_positions[0, 5] / multiplier;
+		//m_output.Write(posx.ToString() + "\n"); // Check
+			
+		TxTransformation rotRob = new TxTransformation(new TxVector(rx, ry, rz), 
+		TxTransformation.TxRotationType.RPY_XYZ);
+		obj.AbsoluteLocation = rotRob;
+	
+		var pos = new TxTransformation(obj.LocationRelativeToWorkingFrame);
+		pos.Translation = new TxVector(posx, posy, posz);
+		obj.LocationRelativeToWorkingFrame = pos;
+		
+		// Refresh the display							
+		TxApplication.RefreshDisplay();
     }
 }
