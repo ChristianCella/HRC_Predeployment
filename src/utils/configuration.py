@@ -1,3 +1,3 @@
-Nsim = 6
+Nsim = 2
 multiplier = 1000
 Ntasks = 4

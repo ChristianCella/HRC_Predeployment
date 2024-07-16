@@ -13,7 +13,10 @@ import numpy as np
 
 import sys
 sys.path.append('.')
-from src .configuration import *
+
+from src.utils.configuration import *
+from src.Layout_optimizer import *
+from src.Scheduler import *
 
 def send_array(sock, array):
     # Send the shape and type of the array first
@@ -43,7 +46,7 @@ def main():
     while trigger_end < Nsim - 1:
 
         # Create all the necessary arrays      
-        sequence = np.array([[0, 0, 1, 1]], dtype = np.int32)
+        sequence = np.array([branch_and_bound], dtype = np.int32)
         send_array(s, sequence)
 
         # receive the array of times for each operation
@@ -57,7 +60,7 @@ def main():
             print(f"The execution time of operation {i} is: {kpi_vec[i]} second(s)")
 
         # Create the scheduling    
-        scheduling = np.array([[2 + trigger_end, 3 + trigger_end, 4 + trigger_end, 5 + trigger_end]], dtype = np.int32)
+        scheduling = np.array([[x + trigger_end for x in milp]], dtype = np.int32)
         send_array(s, scheduling)
 
         # Receive the variable 'trigger_end' from C# code

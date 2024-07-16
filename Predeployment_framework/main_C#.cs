@@ -45,6 +45,7 @@ class Program
             output.Write("The shared data are:");
             PrintArray(shared_data, output);
 
+			// Acquire the number of simulations
             int Nsim = shared_data[0, 0];
 
             // Loop for all the simulations
@@ -54,6 +55,8 @@ class Program
                 var sequence = ReceiveNumpyArray(stream);
                 output.Write("Sequence:");
                 PrintArray(sequence, output);
+                
+                // Create the operations (0 = human, 1 = robot)
 
                 // Send the array of times back to python
                 int[] kpis = { 1 + ii, 2 + ii, 3 + ii, 4 + ii };
