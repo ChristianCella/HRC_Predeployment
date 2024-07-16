@@ -1,2 +1,3 @@
-Nsim = 10
-miao = 2
+Nsim = 6
+multiplier = 1000
+Ntasks = 4
