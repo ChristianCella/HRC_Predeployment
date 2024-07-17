@@ -45,6 +45,7 @@ class Program
         	// Common names of objects and operations
         	string obj_name = "YAOSC_cube";
         	string op_name = "HumanPickAndPlace";
+            string op_rob_name = "RobotPickAndPlace";
         	string target_name = "NewTray";
         	string fr_cube = "fr_cube";
         	
@@ -108,8 +109,11 @@ class Program
                 {
                 	if (sequence[0, kk] == 1)
                 	{
-                		output.Write("MIAO");
                 		HumanPickPlace(op_name, obj_name, target_name, kk + 1, fr_cube, output);
+                	}
+                	else if (sequence[0, kk] == 0)
+                	{
+                		RobotPickPlace(op_rob_name, kk + 1, output, verbose);
                 	}
                 }
                              
@@ -338,5 +342,89 @@ class Program
    		TxHumanTsbTaskOperation tsbPoseTask = op.CreateTask(taskCreationData, tsbPutTask);
    		op.ApplyTask(tsbPoseTask, 1);
    		TxApplication.RefreshDisplay();
+    }
+
+    static void RobotPickPlace(string op_name, int op_idx, StringWriter m_output, bool verbose)
+    {
+    	/*
+    	string new_tcp = "tcp_1";
+    	string new_motion_type = "MoveL";
+		string new_speed = "1000";
+		string new_accel = "1200";
+		string new_blend = "0";
+		string new_coord = "Cartesian";
+		*/
+
+        // Save the robot (the index may change)  	
+    	TxObjectList objects = TxApplication.ActiveDocument.GetObjectsByName("UR5e");
+    	var robot = objects[1] as TxRobot;
+    	   	
+    	// Create the new operation    	
+    	TxContinuousRoboticOperationCreationData data = new TxContinuousRoboticOperationCreationData(op_name + op_idx);
+    	TxApplication.ActiveDocument.OperationRoot.CreateContinuousRoboticOperation(data);
+
+        // Get the created operation
+    	TxTypeFilter opFilter = new TxTypeFilter(typeof(TxContinuousRoboticOperation));
+        TxOperationRoot opRoot = TxApplication.ActiveDocument.OperationRoot;
+                
+ 		TxObjectList allOps = opRoot.GetAllDescendants(opFilter);
+        TxContinuousRoboticOperation MyOp = allOps[0] as TxContinuousRoboticOperation; // The index may change
+
+        // Create all the necessary points       
+        TxRoboticViaLocationOperationCreationData Point1 = new TxRoboticViaLocationOperationCreationData();
+        Point1.Name = "point1" + op_idx; // First point
+        
+        TxRoboticViaLocationOperationCreationData Point2 = new TxRoboticViaLocationOperationCreationData();
+        Point2.Name = "point2" + op_idx; // Second point
+        
+        TxRoboticViaLocationOperationCreationData Point3 = new TxRoboticViaLocationOperationCreationData();
+        Point3.Name = "point3" + op_idx; // Third point
+
+        TxRoboticViaLocationOperation FirstPoint = MyOp.CreateRoboticViaLocationOperation(Point1);
+        TxRoboticViaLocationOperation SecondPoint = MyOp.CreateRoboticViaLocationOperationAfter(Point2, FirstPoint);
+        TxRoboticViaLocationOperation ThirdPoint = MyOp.CreateRoboticViaLocationOperationAfter(Point3, SecondPoint);
+
+        // Impose a position to the new waypoint		
+		double rotVal = Math.PI;
+		TxTransformation rotX = new TxTransformation(new TxVector(rotVal, 0, 0), 
+		TxTransformation.TxRotationType.RPY_XYZ);
+		FirstPoint.AbsoluteLocation = rotX;
+		
+		var pointA = new TxTransformation(FirstPoint.AbsoluteLocation);
+		pointA.Translation = new TxVector(300, 0, 300);
+		FirstPoint.AbsoluteLocation = pointA;
+
+        // Impose a position to the second waypoint		
+		double rotVal2 = Math.PI;
+		TxTransformation rotX2 = new TxTransformation(new TxVector(rotVal2, 0, 0), 
+		TxTransformation.TxRotationType.RPY_XYZ);
+		SecondPoint.AbsoluteLocation = rotX2;
+		
+		var pointB = new TxTransformation(SecondPoint.AbsoluteLocation);
+		pointB.Translation = new TxVector(300, 0, 25);
+		SecondPoint.AbsoluteLocation = pointB;
+		
+		// Impose a position to the third waypoint		
+		double rotVal3 = Math.PI;
+		TxTransformation rotX3 = new TxTransformation(new TxVector(rotVal3, 0, 0), 
+		TxTransformation.TxRotationType.RPY_XYZ);
+		ThirdPoint.AbsoluteLocation = rotX3;
+		
+		var pointC = new TxTransformation(ThirdPoint.AbsoluteLocation);
+		pointC.Translation = new TxVector(300, 0, 300);
+		ThirdPoint.AbsoluteLocation = pointC;
+
+        // NOTE: you must associate the robot to the operation!
+		MyOp.Robot = robot; 
+
+		// Implement the logic to access the parameters of the controller		
+		TxOlpControllerUtilities ControllerUtils = new TxOlpControllerUtilities();		
+		TxRobot AssociatedRobot = ControllerUtils.GetRobot(MyOp); // Verify the correct robot is associated 
+				
+		ITxOlpRobotControllerParametersHandler paramHandler = (ITxOlpRobotControllerParametersHandler)
+		ControllerUtils.GetInterfaceImplementationFromController(robot.Controller.Name,
+		typeof(ITxOlpRobotControllerParametersHandler), typeof(TxRobotSimulationControllerAttribute),
+		"ControllerName");
+        
     }
 }
