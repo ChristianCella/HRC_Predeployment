@@ -41,14 +41,7 @@ class Program
     {
         TcpListener server = null;
         try
-        {
-        	// Common names of objects and operations
-        	string obj_name = "YAOSC_cube";
-        	string op_name = "HumanPickAndPlace";
-            string op_rob_name = "RobotPickAndPlace";
-        	string target_name = "NewTray";
-        	string fr_cube = "fr_cube";
-        	
+        {       	
             // Define the number of simulations
             int port = 12345;
 
@@ -61,7 +54,7 @@ class Program
             TcpClient client = server.AcceptTcpClient();
             NetworkStream stream = client.GetStream();
 
-            // Receive the shared data
+            // Receive the shared data (integers)
             var shared_data = ReceiveNumpyArray(stream);
             if (verbose)
             {
@@ -69,7 +62,7 @@ class Program
                 PrintArray(shared_data, output);
             }
 
-			// Acquire all the data that will not be changed anymore
+			// Unpack all the integers data that will not be chnages anymore
             int Nsim = shared_data[0, 0];
             int Ndecimals = shared_data[0, 1];
             int multiplier = shared_data[0, 2];
@@ -77,6 +70,27 @@ class Program
             int Nitems = shared_data[0, 4];
             int Ncoordinates = shared_data[0, 5];
 
+			// Receive the shared 'general purpose' data (strings)
+			var stringData = ReceiveStringList(stream);
+			if (verbose)
+			{
+				foreach (var str in stringData)
+				{
+					output.Write(str + " ");
+				}
+				output.Write("\n");
+			}
+			
+			// Unpack all the strings that will not be chnaged anymore
+			string obj_name = stringData[0];
+			string op_name = stringData[1];
+			string op_rob_name = stringData[2];
+			string target_name = stringData[3];
+			string fr_cube = stringData[4];
+			string human_name = stringData[5];
+			string robot_name = stringData[6];
+			string waypoint_name = stringData[7];
+                
             // Loop for all the simulations
             for (int ii = 1; ii < Nsim; ii++)
             {
@@ -89,7 +103,7 @@ class Program
                     PrintArray(layout, output);
                 }
                 
-                // Refresh the positions of the objects               
+                // Refresh the positions of the objects ==> Call the function defined below              
                 for (int jj = 1; jj < Nitems + 1; jj ++)
                 {
                 	RefreshResources(obj_name, jj, layout, Ncoordinates, multiplier, output, verbose);
@@ -104,16 +118,16 @@ class Program
                 	PrintArray(sequence, output); 
                 }
                 
-                // Create the operations for the human (index = 1)
+                // Create the operations (both for humajns and robots) ==> Call the functions defined below
                 for (int kk = 0; kk < Ntasks; kk ++)
                 {
                 	if (sequence[0, kk] == 1)
                 	{
-                		HumanPickPlace(op_name, obj_name, target_name, kk + 1, fr_cube, output);
+                		HumanPickPlace(human_name, op_name, obj_name, target_name, kk + 1, fr_cube, output);
                 	}
                 	else if (sequence[0, kk] == 0)
                 	{
-                		RobotPickPlace(op_rob_name, kk + 1, output, verbose);
+                		RobotPickPlace(robot_name, op_rob_name, kk + 1, output, verbose);
                 	}
                 }
                              
@@ -145,12 +159,12 @@ class Program
         }
         catch (Exception e)
         {
-        	output.Write("Something went wrong!");
+        	output.Write("There's an exception: something went wrong!");
             output.Write("Exception: " + e.Message);
         }
     }
 
-    // Definition of custom functions   
+    // --------------------------------------- Custom functions --------------------------------------- //
     static int[,] ReceiveNumpyArray(NetworkStream stream)
     {
         // Receive the shape of the array
@@ -169,6 +183,21 @@ class Program
         Buffer.BlockCopy(arrayBuffer, 0, array, 0, arrayBuffer.Length);
 
         return array;
+    }
+
+	static List<string> ReceiveStringList(NetworkStream stream)
+    {
+        byte[] lengthBuffer = new byte[4];
+        stream.Read(lengthBuffer, 0, lengthBuffer.Length);
+        int length = BitConverter.ToInt32(lengthBuffer, 0);
+
+        byte[] stringBuffer = new byte[length];
+        stream.Read(stringBuffer, 0, stringBuffer.Length);
+
+        string data = Encoding.UTF8.GetString(stringBuffer);
+        List<string> stringList = data.Split(',').ToList();
+
+        return stringList;
     }
 
     static void PrintArray(int[,] array, StringWriter m_output)
@@ -220,9 +249,9 @@ class Program
         }
 		
 		// Impose the new position and rotation	
-		TxTransformation rotRob = new TxTransformation(new TxVector(rx, ry, rz), 
+		TxTransformation rot_obj = new TxTransformation(new TxVector(rx, ry, rz), 
 		TxTransformation.TxRotationType.RPY_XYZ);
-		obj.AbsoluteLocation = rotRob;
+		obj.AbsoluteLocation = rot_obj;
 	
 		var pos = new TxTransformation(obj.LocationRelativeToWorkingFrame);
 		pos.Translation = new TxVector(posx, posy, posz);
@@ -232,7 +261,7 @@ class Program
 		TxApplication.RefreshDisplay();
     }
     
-    static void HumanPickPlace(string op_name, string obj_name, string target_name, int op_idx, string fr_cube, StringWriter m_output)
+    static void HumanPickPlace(string human_name, string op_name, string obj_name, string target_name, int op_idx, string fr_cube, StringWriter m_output)
     {
     	// Initialization variables for the pick and place 	
     	TxHumanTsbSimulationOperation op = null; 
@@ -240,7 +269,7 @@ class Program
     	
     	// Get the human		
 		TxObjectList humans = TxApplication.ActiveSelection.GetItems();
-		humans = TxApplication.ActiveDocument.GetObjectsByName("Jack");
+		humans = TxApplication.ActiveDocument.GetObjectsByName(human_name);
 		TxHuman human = humans[0] as TxHuman;
 		
 		// Apply a certain position to the human and save it in a variable
@@ -344,7 +373,7 @@ class Program
    		TxApplication.RefreshDisplay();
     }
 
-    static void RobotPickPlace(string op_name, int op_idx, StringWriter m_output, bool verbose)
+    static void RobotPickPlace(string robot_name, string op_name, int op_idx, StringWriter m_output, bool verbose)
     {
     	
     	string new_tcp = "tcp_1";
@@ -355,19 +384,15 @@ class Program
 		string new_coord = "Cartesian";
 
         // Save the robot (the index may change)  	
-    	TxObjectList objects = TxApplication.ActiveDocument.GetObjectsByName("UR5e");
-    	var robot = objects[1] as TxRobot;
+    	TxObjectList objects = TxApplication.ActiveDocument.GetObjectsByName(robot_name);
+    	var robot = objects[0] as TxRobot;
     	   	
     	// Create the new operation    	
     	TxContinuousRoboticOperationCreationData data = new TxContinuousRoboticOperationCreationData(op_name + op_idx);
     	TxApplication.ActiveDocument.OperationRoot.CreateContinuousRoboticOperation(data);
 
-        // Get the created operation
-    	TxTypeFilter opFilter = new TxTypeFilter(typeof(TxContinuousRoboticOperation));
-        TxOperationRoot opRoot = TxApplication.ActiveDocument.OperationRoot;
-                
- 		TxObjectList allOps = opRoot.GetAllDescendants(opFilter);
-        TxContinuousRoboticOperation MyOp = allOps[0] as TxContinuousRoboticOperation; // The index may change
+		// Get the created operation (by targeting its name)
+        TxContinuousRoboticOperation MyOp = TxApplication.ActiveDocument.GetObjectsByName(op_name + op_idx)[0] as TxContinuousRoboticOperation;
 
         // Create all the necessary points       
         TxRoboticViaLocationOperationCreationData Point1 = new TxRoboticViaLocationOperationCreationData();

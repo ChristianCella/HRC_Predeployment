@@ -24,6 +24,19 @@ def send_array(sock, array):
     sock.sendall(shape.tobytes())
     sock.sendall(array.tobytes())
 
+def send_string(sock, string_list):
+
+    # Join the list of strings into a single string separated by commas
+    data = ','.join(string_list)
+
+    # Convert the string to bytes and send its length first
+    data_bytes = data.encode()
+    length = np.array([len(data_bytes)], dtype=np.int32)
+    sock.sendall(length.tobytes())
+
+    # Send the actual string data
+    sock.sendall(data_bytes)
+
 def main():
 
     # Create a socket object
@@ -36,11 +49,14 @@ def main():
     # Connect to the server
     s.connect((host, port))
 
-    # First send (shared data)
+    # First send (shared data: first integers, then strings)
     shared_data = np.array([[Nsim, Ndecimals, multiplier, Ntasks, Nitems, Ncoordinates]], dtype = np.int32)
-    send_array(s, shared_data)
+    general_purpose_string_data = [obj_name, op_hum_name, op_rob_name, target_name, fr_cube, human_name, robot_name, point_name]
 
-    # Initialize the trigegr here (not in the configuration file)
+    send_array(s, shared_data)
+    send_string(s, general_purpose_string_data)
+
+    # Initialize the trigegr here (not in the configuration file, otehrwise the code will not run)
     trigger_end = 0
 
     while trigger_end < Nsim - 1:
