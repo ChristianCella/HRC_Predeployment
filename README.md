@@ -1,6 +1,6 @@
 # Predeployment phase code
 
-As of now the code is used to run a hard-coded human simualtion by addressing it by name inside TPS. The idea is to evaluate the ergonomic score based on OWAS. This is the repo that will be modified step by step to obtain the overall optimization farmework.
+This repo implements the complete optimization framework to run the predeployment of a collaborative application. The structure and the codes will be changed with time. The most important codes are inside the folder called Predeployment_framework
 
 ## Code structure
 

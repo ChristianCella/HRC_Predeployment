@@ -346,14 +346,13 @@ class Program
 
     static void RobotPickPlace(string op_name, int op_idx, StringWriter m_output, bool verbose)
     {
-    	/*
+    	
     	string new_tcp = "tcp_1";
     	string new_motion_type = "MoveL";
 		string new_speed = "1000";
 		string new_accel = "1200";
 		string new_blend = "0";
 		string new_coord = "Cartesian";
-		*/
 
         // Save the robot (the index may change)  	
     	TxObjectList objects = TxApplication.ActiveDocument.GetObjectsByName("UR5e");
@@ -425,6 +424,28 @@ class Program
 		ControllerUtils.GetInterfaceImplementationFromController(robot.Controller.Name,
 		typeof(ITxOlpRobotControllerParametersHandler), typeof(TxRobotSimulationControllerAttribute),
 		"ControllerName");
+
+		// Set the new parameters for the waypoint					
+		paramHandler.OnComplexValueChanged("Tool", new_tcp, FirstPoint);
+		paramHandler.OnComplexValueChanged("Motion Type", new_motion_type, FirstPoint);
+        paramHandler.OnComplexValueChanged("Speed", new_speed, FirstPoint);
+        paramHandler.OnComplexValueChanged("Accel", new_accel, FirstPoint);
+		paramHandler.OnComplexValueChanged("Blend", new_blend, FirstPoint);
+		paramHandler.OnComplexValueChanged("Coord Type", new_coord, FirstPoint);
+		
+		paramHandler.OnComplexValueChanged("Tool", new_tcp, SecondPoint);
+		paramHandler.OnComplexValueChanged("Motion Type", new_motion_type, SecondPoint);
+        paramHandler.OnComplexValueChanged("Speed", new_speed, SecondPoint);
+        paramHandler.OnComplexValueChanged("Accel", new_accel, SecondPoint);
+		paramHandler.OnComplexValueChanged("Blend", new_blend, SecondPoint);
+		paramHandler.OnComplexValueChanged("Coord Type", new_coord, SecondPoint);
+		
+		paramHandler.OnComplexValueChanged("Tool", new_tcp, ThirdPoint);
+		paramHandler.OnComplexValueChanged("Motion Type", new_motion_type, ThirdPoint);
+        paramHandler.OnComplexValueChanged("Speed", new_speed, ThirdPoint);
+        paramHandler.OnComplexValueChanged("Accel", new_accel, ThirdPoint);
+		paramHandler.OnComplexValueChanged("Blend", new_blend, ThirdPoint);
+		paramHandler.OnComplexValueChanged("Coord Type", new_coord, ThirdPoint);
         
     }
 }
