@@ -6,6 +6,10 @@ This is the first attempt for a structured communication.
 * Python mimics the "Scheduling" algorithm (not yet implemented), finds the optimal schedule and sends the times back to C#.
 * In C# the times are received and a function concatenates the operations (Gantt chart).
 * The complete collaborative operation is run and a boolean flag is sent to Python to notify possible collisions.
+
+NOTE:
+robotic operations ==> 'TxContinuousRoboticOperation'
+human operations ==> 'TxHumanTsbSimulationOperation'
 */
 
 using System;
@@ -36,7 +40,7 @@ class Program
 {
 	
 	// Useful variables
-    static bool verbose = false;
+    static bool verbose = true;
     
     static public void Main(ref StringWriter output)
     {
@@ -119,26 +123,59 @@ class Program
                 	PrintArray(sequence, output); 
                 }
                 
-                // Create the operations (both for humajns and robots) ==> Call the functions defined below
+                // Create the operations and get their duration
+				List<int> kpis = new List<int> ();
+				double time_op;
+				int time_multiplied;
+
                 for (int kk = 0; kk < Ntasks; kk ++)
                 {
                 	if (sequence[0, kk] == 1)
                 	{
                 		HumanPickPlace(human_name, op_name, obj_name, target_name, kk + 1, fr_cube, output);
+
+						// Get the created operation
+						TxHumanTsbSimulationOperation op = TxApplication.ActiveDocument.GetObjectsByName(op_name + (kk + 1).ToString())[0] as TxHumanTsbSimulationOperation;
+
+						// calculate the time
+						time_op = Math.Round(op.Duration, Ndecimals) * multiplier;
+						time_multiplied = (int)time_op;
+						output.Write("The time is: " + op.Duration + "\n");
+
+						// Augment the array
+						kpis.Add(time_multiplied);
                 	}
                 	else if (sequence[0, kk] == 0)
                 	{
                 		RobotPickPlace(robot_name, obj_name, target_name, op_rob_name, kk + 1, output, verbose);
+
+						// Get the created operation (it must be executed to get the time, unlike for the human)
+						var op = TxApplication.ActiveDocument.OperationRoot.GetAllDescendants(new 
+						TxTypeFilter(typeof(TxContinuousRoboticOperation))).FirstOrDefault(x => x.Name.Equals(op_rob_name + (kk + 1).ToString())) as 
+						TxContinuousRoboticOperation;     
+						TxApplication.ActiveDocument.CurrentOperation = op;
+
+						// Play the operation silently, then refresh the display and rewind the simulation   
+						TxSimulationPlayer simPlayer = TxApplication.ActiveDocument.SimulationPlayer;					
+						simPlayer.PlaySilently();
+						simPlayer.Rewind();
+
+						// calculate the time
+						time_op = Math.Round(op.Duration, Ndecimals) * multiplier;
+						time_multiplied = (int)time_op;
+						output.Write("The time is: " + op.Duration + "\n");
+
+						// Augment the array
+						kpis.Add(time_multiplied);
                 	}
                 }
                              
                 // Send the array of times back to python
-                int[] kpis = { 1 + ii, 2 + ii, 3 + ii, 4 + ii };
                 string data = string.Join(",", kpis);
                 byte[] kpi_vec = Encoding.ASCII.GetBytes(data); // ASCII encoding              
                 stream.Write(kpi_vec, 0, kpi_vec.Length); // Write on the stream
 
-                // Receive schedulding array array
+                // Receive schedulding array
                 var scheduling = ReceiveNumpyArray(stream);
                 if (verbose)
                 {

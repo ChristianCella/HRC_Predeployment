@@ -2,6 +2,7 @@ import sys
 sys.path.append('.')
 from src.utils.configuration import *
 
+
 """ 
 Here goes the TAS algorithm: 'branch_and_bound' and 'milp' will be given by the algorithm
 """
@@ -16,4 +17,3 @@ for idx in human_idx:
 
 # Create the 'sequence' variable (this will contain the statring times for the operations)
 milp = [2, 3, 4, 5]
-  

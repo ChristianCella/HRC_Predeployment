@@ -73,14 +73,15 @@ def main():
         kpi = s.recv(1024).decode()
         kpi = [int(num) for num in kpi.split(',')] # list variable
                   
-        # Print the values          
+        # Display the values on screen        
         kpi_vec = np.array(kpi)
 
         for i in range(0, len(kpi_vec)):
-            print(f"The execution time of operation {i} is: {kpi_vec[i]} second(s)")
+            print(f"The execution time of operation {i} is: {kpi_vec[i] / multiplier} second(s)")
 
-        # Create the scheduling    
-        scheduling = np.array([[x + trigger_end for x in milp]], dtype = np.int32)
+        # Create the scheduling (for now the algorithm just takes each time received and considers it as the
+        # correct statrting time)   
+        scheduling = np.array([np.cumsum(kpi_vec, dtype=np.int32)], dtype = np.int32)
         send_array(s, scheduling)
 
         # Receive the variable 'trigger_end' from C# code
