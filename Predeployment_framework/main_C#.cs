@@ -770,26 +770,31 @@ class Program
 
 		m_output.Write("The name of the compound operation is: " + comp_op.Name.ToString() + "\n");
 
-		// Add operations to the complete one and then create the Gantt chart
+		// Create the Gantt chart
 		for (int ii = 0; ii < created_op.Count; ii ++)
 		{
+			// Get the name of the first task to be executed
 			int task_idx = sequence[0, ii];
-			m_output.Write("The variable task_idx is: " + task_idx + "\n");
-			string task_name = created_op[task_idx].Name.ToString();
-			m_output.Write("The variable task_name is: " + task_name + "\n");
+			string task_name = created_op[task_idx].Name.ToString();			
+
+			// Create the variables to add the task and change its starting time
 			TxObjectList Task_ii = TxApplication.ActiveDocument.GetObjectsByName(task_name);
-			m_output.Write("MIAO4\n");
 			var add_task_ii = Task_ii[0] as ITxObject;
 			var task_ii = Task_ii[0] as ITxOperation;
-			m_output.Write("The name of the task is: " + task_ii.Name.ToString() + "\n");
-			double time_ii = (double)starting_times[0, ii] / multiplier;
-			m_output.Write("The variable time_ii is: " + time_ii + "\n");
 
+			// Get the relative start time
+			double time_ii = (double)starting_times[0, ii] / multiplier;
+
+			// First add the operation to the compound operation and then set the relative start time
 			comp_op.AddObject(add_task_ii);
 			comp_op.SetChildOperationRelativeStartTime(task_ii, time_ii);
 		}
 
-		// If you arrived at this point, everything worked fine
-		m_output.Write("The Gantt chart was created successfully!");
+		if (verbose)
+		{
+			// If you arrived at this point, everything worked fine
+			m_output.Write("The Gantt chart was created successfully!");
+		}
+
 	}
 }

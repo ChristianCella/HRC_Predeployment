@@ -19,6 +19,7 @@ from src.utils.configuration import *
 from src.Layout_optimizer import *
 from src.Scheduler import *
 
+
 def send_array(sock, array):
     # Send the shape and type of the array first
     shape = np.array(array.shape, dtype=np.int32)
@@ -61,12 +62,6 @@ def main():
     trigger_end = 0
 
     while trigger_end < Nsim - 1:
-
-        if keyboard.is_pressed('q') : 
-            
-            print("Exiting program")
-            s.close()
-            break
 
         # Send the layout (Bayesian Optimization will be the higher-level optimizer)  
         new_layout = np.array([layout], dtype = np.int32)
