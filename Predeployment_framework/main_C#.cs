@@ -175,6 +175,14 @@ class Program
                 byte[] kpi_vec = Encoding.ASCII.GetBytes(data); // ASCII encoding              
                 stream.Write(kpi_vec, 0, kpi_vec.Length); // Write on the stream
 
+				// Receive sequence of operations
+                var assembly_sequence = ReceiveNumpyArray(stream);
+                if (verbose)
+                {
+                	output.Write("The assembly sequence is: ");
+                	PrintArray(assembly_sequence, output);
+                }
+
                 // Receive schedulding array
                 var scheduling = ReceiveNumpyArray(stream);
                 if (verbose)
@@ -182,6 +190,9 @@ class Program
                 	output.Write("The scheduling is: ");
                 	PrintArray(scheduling, output);
                 }
+
+				// Get all the created operations
+				TxObjectList operations = GetCreatedOperations(verbose, output);
               
                 // Send the trigger_end back to Python
                 string trigger_end = ii.ToString();
@@ -712,4 +723,57 @@ class Program
 		AddOpenCloseCommand("point6op" + op_idx, "Camozzi Gripper UR5e", "OPEN", "tf_tcp_1");
         
     }
+
+	static TxObjectList GetCreatedOperations(bool verbose, StringWriter m_output)
+	{
+		TxOperationRoot variable = TxApplication.ActiveDocument.OperationRoot;
+    	
+    	// Specify the type of operations that we want to get
+    	TxTypeFilter filter = new TxTypeFilter(typeof(ITxOperation));
+        filter.AddIncludedType(typeof(TxHumanTsbSimulationOperation));
+    	filter.AddIncludedType(typeof(TxContinuousRoboticOperation));
+    	
+    	// Get the list of operations: do not use 'GetAllDescendants' because it also gives the points inside the operations
+    	TxObjectList List = variable.GetDirectDescendants(filter);
+
+		if (verbose)
+		{
+			// Display the names to check if they are correct
+			for (int ii = 0; ii < List.Count; ii ++)
+			{
+				int new_idx = ii + 1;
+				m_output.Write("The operation number " + new_idx + " is called: " + List[ii].Name.ToString() + "\n");
+    		}
+		}
+
+		return List;
+	}
+
+	static void CreateGantt(TxObjectList created_op, int[,] sequence, int[,] starting_times, 
+							StringWriter m_output, bool verbose)
+	{
+		// Define some variables
+    	string comp_op_name = "CompOp";
+    
+    	// Get the compound operation    	
+        TxObjectList Operation = TxApplication.ActiveDocument.GetObjectsByName(comp_op_name);
+        var op = Operation[0] as ITxCompoundOperation;
+        
+        TxCompoundOperation comp_op = Operation[0] as TxCompoundOperation;
+
+		// Create the Gantt chart
+		for (int ii = 0; ii < created_op.Count; ii ++)
+		{
+			int task_idx = sequence[0, ii];
+			string task_name = created_op[task_idx].Name.ToString();
+			TxObjectList Task_ii = TxApplication.ActiveDocument.GetObjectsByName(task_name);
+			var task_ii = Task_ii[0] as ITxOperation;
+			double time_ii = starting_times[0, ii];
+
+			comp_op.SetChildOperationRelativeStartTime(task_ii, time_ii);
+		}
+
+		// If you arrived at this point, everything worked fine
+		m_output.Write("The Gantt chart was created successfully!");
+	}
 }

@@ -66,23 +66,24 @@ def main():
         send_array(s, new_layout)
 
         # Send the sequence of operations (TAS is the lower level optimizer)   
+        tas = AllocationAndScheduling(Ntasks)
+        branch_and_bound = tas.allocation()
+
         sequence = np.array([branch_and_bound], dtype = np.int32)
         send_array(s, sequence)
 
         # receive the array of times for each operation
         kpi = s.recv(1024).decode()
         kpi = [int(num) for num in kpi.split(',')] # list variable
-                  
-        # Display the values on screen        
         kpi_vec = np.array(kpi)
 
-        for i in range(0, len(kpi_vec)):
-            print(f"The execution time of operation {i} is: {kpi_vec[i] / multiplier} second(s)")
+        # Calculate the starting times              
+        indices, scheduling = tas.scheduling(kpi_vec)
 
-        # Create the scheduling (for now the algorithm just takes each time received and considers it as the
-        # correct statrting time)   
-        scheduling = np.array([np.cumsum(kpi_vec, dtype=np.int32)], dtype = np.int32)
-        send_array(s, scheduling)
+        sequence_of_operations = np.array([indices], dtype = np.int32)
+        starting_times = np.array([scheduling], dtype = np.int32)
+        send_array(s, sequence_of_operations)
+        send_array(s, starting_times)
 
         # Receive the variable 'trigger_end' from C# code
         trigger_end = int(s.recv(1024).decode())
