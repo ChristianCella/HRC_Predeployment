@@ -193,6 +193,9 @@ class Program
 
 				// Get all the created operations
 				TxObjectList operations = GetCreatedOperations(verbose, output);
+
+				// Create the Gantt Chart
+				CreateGantt(operations, assembly_sequence, scheduling, multiplier, output, verbose);
               
                 // Send the trigger_end back to Python
                 string trigger_end = ii.ToString();
@@ -750,10 +753,14 @@ class Program
 	}
 
 	static void CreateGantt(TxObjectList created_op, int[,] sequence, int[,] starting_times, 
-							StringWriter m_output, bool verbose)
+							int multiplier, StringWriter m_output, bool verbose)
 	{
 		// Define some variables
     	string comp_op_name = "CompOp";
+
+		// Create the compound operation and save it in a variable
+        TxCompoundOperationCreationData dat = new TxCompoundOperationCreationData(comp_op_name);
+        TxApplication.ActiveDocument.OperationRoot.CreateCompoundOperation(dat);
     
     	// Get the compound operation    	
         TxObjectList Operation = TxApplication.ActiveDocument.GetObjectsByName(comp_op_name);
@@ -761,15 +768,24 @@ class Program
         
         TxCompoundOperation comp_op = Operation[0] as TxCompoundOperation;
 
-		// Create the Gantt chart
+		m_output.Write("The name of the compound operation is: " + comp_op.Name.ToString() + "\n");
+
+		// Add operations to the complete one and then create the Gantt chart
 		for (int ii = 0; ii < created_op.Count; ii ++)
 		{
 			int task_idx = sequence[0, ii];
+			m_output.Write("The variable task_idx is: " + task_idx + "\n");
 			string task_name = created_op[task_idx].Name.ToString();
+			m_output.Write("The variable task_name is: " + task_name + "\n");
 			TxObjectList Task_ii = TxApplication.ActiveDocument.GetObjectsByName(task_name);
+			m_output.Write("MIAO4\n");
+			var add_task_ii = Task_ii[0] as ITxObject;
 			var task_ii = Task_ii[0] as ITxOperation;
-			double time_ii = starting_times[0, ii];
+			m_output.Write("The name of the task is: " + task_ii.Name.ToString() + "\n");
+			double time_ii = (double)starting_times[0, ii] / multiplier;
+			m_output.Write("The variable time_ii is: " + time_ii + "\n");
 
+			comp_op.AddObject(add_task_ii);
 			comp_op.SetChildOperationRelativeStartTime(task_ii, time_ii);
 		}
 
