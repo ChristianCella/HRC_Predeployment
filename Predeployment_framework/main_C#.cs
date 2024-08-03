@@ -196,6 +196,8 @@ class Program
 
 				// Create the Gantt Chart
 				CreateGantt(operations, assembly_sequence, scheduling, multiplier, output, verbose);
+
+				// Run the complete operation and check for collisions
               
                 // Send the trigger_end back to Python
                 string trigger_end = ii.ToString();
